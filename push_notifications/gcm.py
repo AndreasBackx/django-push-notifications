@@ -10,7 +10,7 @@ import json
 from django.core.exceptions import ImproperlyConfigured
 
 from . import NotificationError
-from .models import GCMDevice, NewDevice
+from .models import GCMDevice, BareDevice
 from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
 
 try:
@@ -91,7 +91,7 @@ def _gcm_send_plain(device, data, **kwargs):
 def _gcm_send_json(devices, data, **kwargs):
 	"""
 	Sends a GCM notification to one or more devices. The devices needs to be
-	a list and need to be of the same model (NewDevice/GCMDevice).
+	a list and need to be of the same model (BareDevice/GCMDevice).
 	This will send the notification as json data.
 	"""
 
@@ -116,8 +116,8 @@ def _gcm_send_json(devices, data, **kwargs):
 			elif er.get("error", "none") is not "none":
 				throw_error = 1
 		if ids_to_remove:
-			if isinstance(devices[0].__class__.objects, NewDevice):
-				NewDevice.objects.invalidate(registration_ids=ids_to_remove)
+			if isinstance(devices[0].__class__.objects, BareDevice):
+				BareDevice.objects.invalidate(registration_ids=ids_to_remove)
 			else:
 				removed = GCMDevice.objects.filter(registration_id__in=ids_to_remove)
 				removed.update(active=0)

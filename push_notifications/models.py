@@ -22,7 +22,7 @@ class DeviceManager(models.Manager):
 
 	def invalidate(self, registration_ids):
 		""" Called when some registration ids are deemed invalid. """
-		self.delete(registration_id__in=registration_ids)
+		self.filter(registration_id__in=registration_ids).update(active=False)
 
 
 class DeviceQuerySet(models.query.QuerySet):
@@ -32,10 +32,11 @@ class DeviceQuerySet(models.query.QuerySet):
 			apnsDevices = []
 
 			for device in self:
-				if device.service == SERVICE_APNS:
-					apnsDevices.append(device)
-				else:
-					gcmDevices.append(device)
+				if device.active:
+					if device.service == SERVICE_APNS:
+						apnsDevices.append(device)
+					else:
+						gcmDevices.append(device)
 
 			apns_send_bulk_message(devices=apnsDevices, alert=message, **kwargs)
 
@@ -47,36 +48,60 @@ class DeviceQuerySet(models.query.QuerySet):
 			return gcm_send_bulk_message(devices=gcmDevices, data=data, **kwargs)
 
 
-class NewDevice(models.Model):
+class BareDevice(models.Model):
 	service = models.IntegerField(choices=SERVICES, verbose_name=_("Notification service"))
 	registration_id = models.TextField(verbose_name=_("Registration ID"))
+	active = models.BooleanField(
+		verbose_name=_("Is active"),
+		default=True,
+		help_text=_("Inactive devices will not be sent notifications")
+	)
 
 	objects = DeviceManager()
 
+	class Meta:
+		abstract = True
+
 	def save(self, *args, **kwargs):
-		if self.service == SERVICE_APNS and len(self.registration_id) > 64:
+		if (self.active
+			and self.service == SERVICE_APNS
+			and len(self.registration_id) > 64):
 			raise ValidationError("APNS registration_id's max length is 64.")
-		super(NewDevice, self).save(*args, **kwargs)
+		super(BareDevice, self).save(*args, **kwargs)
 
 	def send_message(self, message, **kwargs):
-		if self.service == SERVICE_APNS:
-			return apns_send_message(registration_id=self.registration_id, alert=message, **kwargs)
-		else:
-			data = kwargs.pop("extra", {})
-			if message is not None:
-				data["message"] = message
-			from .gcm import gcm_send_message
-			return gcm_send_message(registration_id=self.registration_id, data=data, **kwargs)
+		if self.active:
+			if self.service == SERVICE_APNS:
+				return apns_send_message(
+					registration_id=self.registration_id,
+					alert=message,
+					**kwargs
+				)
+			else:
+				data = kwargs.pop("extra", {})
+				if message is not None:
+					data["message"] = message
+				from .gcm import gcm_send_message
+				return gcm_send_message(
+					registration_id=self.registration_id,
+					data=data,
+					**kwargs
+				)
 
 	def invalidate(self):
 		""" Called when the registration_id is deemed invalid. """
-		self.delete()
+		self.active = False
+		self.save()
 
 	def __unicode__(self):
 		return "{service}: {registration_id}".format(
 			service=self.get_service_display(),
 			registration_id=self.registration_id
 		)
+
+
+class SimpleDevice(BareDevice):
+	pass
 
 
 class Device(models.Model):
