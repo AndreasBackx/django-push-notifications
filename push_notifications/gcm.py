@@ -6,8 +6,12 @@ https://developer.android.com/google/gcm/index.html
 """
 
 import json
-from .models import GCMDevice
 
+from django.core.exceptions import ImproperlyConfigured
+
+from . import NotificationError
+from .models import GCMDevice, NewDevice
+from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
 
 try:
 	from urllib.request import Request, urlopen
@@ -16,10 +20,6 @@ except ImportError:
 	# Python 2 support
 	from urllib2 import Request, urlopen
 	from urllib import urlencode
-
-from django.core.exceptions import ImproperlyConfigured
-from . import NotificationError
-from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
 
 
 class GCMError(NotificationError):
@@ -49,7 +49,7 @@ def _gcm_send(data, content_type):
 	return urlopen(request).read().decode("utf-8")
 
 
-def _gcm_send_plain(registration_id, data, **kwargs):
+def _gcm_send_plain(device, data, **kwargs):
 	"""
 	Sends a GCM notification to a single registration_id.
 	This will send the notification as form data.
@@ -57,7 +57,7 @@ def _gcm_send_plain(registration_id, data, **kwargs):
 	gcm_send_bulk_message() with a list of registration_ids
 	"""
 
-	values = {"registration_id": registration_id}
+	values = {"registration_id": device.registration_id}
 
 	for k, v in data.items():
 		values["data.%s" % (k)] = v.encode("utf-8")
@@ -76,8 +76,11 @@ def _gcm_send_plain(registration_id, data, **kwargs):
 	if result.startswith("Error="):
 		if result in ("Error=NotRegistered", "Error=InvalidRegistration"):
 			# Deactivate the problematic device
-			device = GCMDevice.objects.filter(registration_id=values["registration_id"])
-			device.update(active=0)
+			if(hasattr(device, "invalidate")):
+				device.invalid()
+			else:
+				device.active = False
+				device.save()
 			return result
 
 		raise GCMError(result)
@@ -85,14 +88,14 @@ def _gcm_send_plain(registration_id, data, **kwargs):
 	return result
 
 
-def _gcm_send_json(registration_ids, data, **kwargs):
+def _gcm_send_json(devices, data, **kwargs):
 	"""
-	Sends a GCM notification to one or more registration_ids. The registration_ids
-	needs to be a list.
+	Sends a GCM notification to one or more devices. The devices needs to be
+	a list and need to be of the same model (NewDevice/GCMDevice).
 	This will send the notification as json data.
 	"""
 
-	values = {"registration_ids": registration_ids}
+	values = {"registration_ids": [device.registration_id for device in devices]}
 
 	if data is not None:
 		values["data"] = data
@@ -113,14 +116,17 @@ def _gcm_send_json(registration_ids, data, **kwargs):
 			elif er.get("error", "none") is not "none":
 				throw_error = 1
 		if ids_to_remove:
-			removed = GCMDevice.objects.filter(registration_id__in=ids_to_remove)
-			removed.update(active=0)
+			if isinstance(devices[0].__class__.objects, NewDevice):
+				NewDevice.objects.invalidate(registration_ids=ids_to_remove)
+			else:
+				removed = GCMDevice.objects.filter(registration_id__in=ids_to_remove)
+				removed.update(active=0)
 		if throw_error:
 			raise GCMError(result)
 	return result
 
 
-def gcm_send_message(registration_id, data, **kwargs):
+def gcm_send_message(device, data, **kwargs):
 	"""
 	Sends a GCM notification to a single registration_id.
 
@@ -131,10 +137,10 @@ def gcm_send_message(registration_id, data, **kwargs):
 	https://developers.google.com/cloud-messaging/server-ref#downstream
 	"""
 
-	return _gcm_send_plain(registration_id, data, **kwargs)
+	return _gcm_send_plain(device, data, **kwargs)
 
 
-def gcm_send_bulk_message(registration_ids, data, **kwargs):
+def gcm_send_bulk_message(devices, data, **kwargs):
 	"""
 	Sends a GCM notification to one or more registration_ids. The registration_ids
 	needs to be a list.
@@ -147,10 +153,10 @@ def gcm_send_bulk_message(registration_ids, data, **kwargs):
 	# GCM only allows up to 1000 reg ids per bulk message
 	# https://developer.android.com/google/gcm/gcm.html#request
 	max_recipients = SETTINGS.get("GCM_MAX_RECIPIENTS")
-	if len(registration_ids) > max_recipients:
+	if len(devices) > max_recipients:
 		ret = []
-		for chunk in _chunks(registration_ids, max_recipients):
+		for chunk in _chunks(devices, max_recipients):
 			ret.append(_gcm_send_json(chunk, data, **kwargs))
 		return ret
 
-	return _gcm_send_json(registration_ids, data, **kwargs)
+	return _gcm_send_json(devices, data, **kwargs)

@@ -113,9 +113,8 @@ class ModelTestCase(TestCase):
         self.create_devices(device_list)
         for index, error in enumerate(GCM_PLAIN_RESPONSE_ERROR):
             with mock.patch("push_notifications.gcm._gcm_send",
-                            return_value=error) as p:
-                device = GCMDevice.objects. \
-                    get(registration_id=device_list[index])
+                            return_value=error):
+                device = GCMDevice.objects.get(registration_id=device_list[index])
                 device.send_message("Hello World!")
                 assert GCMDevice.objects.get(registration_id=device_list[index]) \
                            .active is False
@@ -125,9 +124,8 @@ class ModelTestCase(TestCase):
         device_list = ['abc']
         self.create_devices(device_list)
         with mock.patch("push_notifications.gcm._gcm_send",
-                        return_value=GCM_PLAIN_RESPONSE_ERROR_B) as p:
-            device = GCMDevice.objects. \
-                get(registration_id=device_list[0])
+                        return_value=GCM_PLAIN_RESPONSE_ERROR_B):
+            device = GCMDevice.objects.get(registration_id=device_list[0])
             with self.assertRaises(GCMError):
                 device.send_message("Hello World!")
             assert GCMDevice.objects.get(registration_id=device_list[0]) \

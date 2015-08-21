@@ -15,3 +15,8 @@ build
 
 # tox
 .tox
+
+*.sublime-project
+*.sublime-workspace
+.python-version
+*.egg-info/

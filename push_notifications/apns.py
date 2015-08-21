@@ -194,9 +194,9 @@ def _apns_receive_feedback(socket):
 	return expired_token_list
 
 
-def apns_send_message(registration_id, alert, **kwargs):
+def apns_send_message(device, alert, **kwargs):
 	"""
-	Sends an APNS notification to a single registration_id.
+	Sends an APNS notification to a single device.
 	This will send the notification as form data.
 	If sending multiple notifications, it is more efficient to use
 	apns_send_bulk_message()
@@ -206,21 +206,21 @@ def apns_send_message(registration_id, alert, **kwargs):
 	to this for silent notifications.
 	"""
 
-	_apns_send(registration_id, alert, **kwargs)
+	_apns_send(device.registration_id, alert, **kwargs)
 
 
-def apns_send_bulk_message(registration_ids, alert, **kwargs):
+def apns_send_bulk_message(devices, alert, **kwargs):
 	"""
-	Sends an APNS notification to one or more registration_ids.
-	The registration_ids argument needs to be a list.
+	Sends an APNS notification to one or more devices.
+	The devices argument needs to be a list.
 
 	Note that if set alert should always be a string. If it is not set,
 	it won't be included in the notification. You will need to pass None
 	to this for silent notifications.
 	"""
 	with closing(_apns_create_socket_to_push()) as socket:
-		for identifier, registration_id in enumerate(registration_ids):
-			_apns_send(registration_id, alert, identifier=identifier, socket=socket, **kwargs)
+		for identifier, device in enumerate(devices):
+			_apns_send(device.registration_id, alert, identifier=identifier, socket=socket, **kwargs)
 		_apns_check_errors(socket)
 
 
