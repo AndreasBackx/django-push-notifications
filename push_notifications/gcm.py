@@ -34,8 +34,8 @@ def _chunks(l, n):
 		yield l[i:i + n]
 
 
-def _gcm_send(data, content_type):
-	key = SETTINGS.get("GCM_API_KEY")
+def _gcm_send(data, content_type, api_key=None):
+	key = SETTINGS.get("GCM_API_KEY") if api_key is None else api_key
 	if not key:
 		raise ImproperlyConfigured('You need to set PUSH_NOTIFICATIONS_SETTINGS["GCM_API_KEY"] to send messages through GCM.')
 
@@ -49,7 +49,7 @@ def _gcm_send(data, content_type):
 	return urlopen(request).read().decode("utf-8")
 
 
-def _gcm_send_plain(device, data, **kwargs):
+def _gcm_send_plain(device, data, api_key=None, **kwargs):
 	"""
 	Sends a GCM notification to a single registration_id.
 	This will send the notification as form data.
@@ -71,13 +71,17 @@ def _gcm_send_plain(device, data, **kwargs):
 
 	data = urlencode(sorted(values.items())).encode("utf-8")  # sorted items for tests
 
-	result = _gcm_send(data, "application/x-www-form-urlencoded;charset=UTF-8")
+	result = _gcm_send(
+		data,
+		"application/x-www-form-urlencoded;charset=UTF-8",
+		api_key=api_key
+	)
 
 	if result.startswith("Error="):
 		if result in ("Error=NotRegistered", "Error=InvalidRegistration"):
 			# Deactivate the problematic device
 			if(hasattr(device, "invalidate")):
-				device.invalid()
+				device.invalidate()
 			else:
 				device.active = False
 				device.save()
@@ -88,7 +92,7 @@ def _gcm_send_plain(device, data, **kwargs):
 	return result
 
 
-def _gcm_send_json(devices, data, **kwargs):
+def _gcm_send_json(devices, data, api_key=None, **kwargs):
 	"""
 	Sends a GCM notification to one or more devices. The devices needs to be
 	a list and need to be of the same model (BareDevice/GCMDevice).
@@ -106,7 +110,14 @@ def _gcm_send_json(devices, data, **kwargs):
 
 	data = json.dumps(values, separators=(",", ":"), sort_keys=True).encode("utf-8")  # keys sorted for tests
 
-	result = json.loads(_gcm_send(data, "application/json"))
+	result = json.loads(
+		_gcm_send(
+			data,
+			"application/json",
+			api_key=api_key
+		)
+	)
+
 	if result["failure"]:
 		ids_to_remove = []
 		throw_error = 0
@@ -126,7 +137,7 @@ def _gcm_send_json(devices, data, **kwargs):
 	return result
 
 
-def gcm_send_message(device, data, **kwargs):
+def gcm_send_message(device, data, api_key=None, **kwargs):
 	"""
 	Sends a GCM notification to a single registration_id.
 
@@ -137,10 +148,15 @@ def gcm_send_message(device, data, **kwargs):
 	https://developers.google.com/cloud-messaging/server-ref#downstream
 	"""
 
-	return _gcm_send_plain(device, data, **kwargs)
+	return _gcm_send_plain(
+		device,
+		data,
+		api_key=api_key,
+		**kwargs
+	)
 
 
-def gcm_send_bulk_message(devices, data, **kwargs):
+def gcm_send_bulk_message(devices, data, api_key=None, **kwargs):
 	"""
 	Sends a GCM notification to one or more registration_ids. The registration_ids
 	needs to be a list.
@@ -156,7 +172,19 @@ def gcm_send_bulk_message(devices, data, **kwargs):
 	if len(devices) > max_recipients:
 		ret = []
 		for chunk in _chunks(devices, max_recipients):
-			ret.append(_gcm_send_json(chunk, data, **kwargs))
+			ret.append(
+				_gcm_send_json(
+					chunk,
+					data,
+					api_key=api_key,
+					**kwargs
+				)
+			)
 		return ret
 
-	return _gcm_send_json(devices, data, **kwargs)
+	return _gcm_send_json(
+		devices,
+		data,
+		api_key=api_key,
+		**kwargs
+	)

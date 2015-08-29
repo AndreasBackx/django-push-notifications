@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.utils.translation import ugettext_lazy as _
-from .models import APNSDevice, GCMDevice, get_expired_tokens
 from django.db import connection
+from django.utils.translation import ugettext_lazy as _
+
+from .models import APNSDevice, GCMDevice, SimpleDevice, get_expired_tokens
 
 User = get_user_model()
 
@@ -72,3 +73,8 @@ class GCMDeviceAdmin(DeviceAdmin):
 
 admin.site.register(APNSDevice, DeviceAdmin)
 admin.site.register(GCMDevice, GCMDeviceAdmin)
+
+
+@admin.register(SimpleDevice)
+class SimpleDeviceAdmin(admin.ModelAdmin):
+	pass

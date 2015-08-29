@@ -38,19 +38,38 @@ class DeviceQuerySet(models.query.QuerySet):
 					else:
 						gcmDevices.append(device)
 
-			apns_send_bulk_message(devices=apnsDevices, alert=message, **kwargs)
+			if apnsDevices:
+				apns_send_bulk_message(
+					devices=apnsDevices,
+					alert=message,
+					certificate=apnsDevices[0].APNS_CERTIFICATE,
+					**kwargs
+				)
 
-			data = kwargs.pop("extra", {})
-			if message is not None:
-				data["message"] = message
+			if gcmDevices:
+				data = kwargs.pop("extra", {})
+				if message is not None:
+					data["message"] = message
 
-			from .gcm import gcm_send_bulk_message
-			return gcm_send_bulk_message(devices=gcmDevices, data=data, **kwargs)
+				from .gcm import gcm_send_bulk_message
+				return gcm_send_bulk_message(
+					devices=gcmDevices,
+					data=data,
+					api_key=apnsDevices[0].APNS_CERTIFICATE,
+					**kwargs
+				)
+			return None
 
 
 class BareDevice(models.Model):
-	service = models.IntegerField(choices=SERVICES, verbose_name=_("Notification service"))
-	registration_id = models.TextField(verbose_name=_("Registration ID"))
+	service = models.IntegerField(
+		choices=SERVICES,
+		verbose_name=_("Notification service")
+	)
+	registration_id = models.TextField(
+		blank=True,
+		verbose_name=_("Registration ID")
+	)
 	active = models.BooleanField(
 		verbose_name=_("Is active"),
 		default=True,
@@ -58,12 +77,16 @@ class BareDevice(models.Model):
 	)
 
 	objects = DeviceManager()
+	APNS_CERTIFICATE = settings.PUSH_NOTIFICATIONS_SETTINGS.get("APNS_CERTIFICATE", None) if hasattr(settings, 'PUSH_NOTIFICATIONS_SETTINGS') else None
+	GCM_API_KEY = settings.PUSH_NOTIFICATIONS_SETTINGS.get("GCM_API_KEY", None) if hasattr(settings, 'PUSH_NOTIFICATIONS_SETTINGS') else None
 
 	class Meta:
 		abstract = True
 
 	def save(self, *args, **kwargs):
-		if (self.active
+		if not self.registration_id:
+			self.active = False
+		elif (self.active
 			and self.service == SERVICE_APNS
 			and len(self.registration_id) > 64):
 			raise ValidationError("APNS registration_id's max length is 64.")
@@ -73,8 +96,9 @@ class BareDevice(models.Model):
 		if self.active:
 			if self.service == SERVICE_APNS:
 				return apns_send_message(
-					registration_id=self.registration_id,
+					device=self,
 					alert=message,
+					certificate=self.APNS_CERTIFICATE,
 					**kwargs
 				)
 			else:
@@ -83,8 +107,9 @@ class BareDevice(models.Model):
 					data["message"] = message
 				from .gcm import gcm_send_message
 				return gcm_send_message(
-					registration_id=self.registration_id,
+					device=self,
 					data=data,
+					api_key=self.GCM_API_KEY,
 					**kwargs
 				)
 
