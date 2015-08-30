@@ -80,7 +80,7 @@ def _gcm_send_plain(device, data, api_key=None, **kwargs):
 	if result.startswith("Error="):
 		if result in ("Error=NotRegistered", "Error=InvalidRegistration"):
 			# Deactivate the problematic device
-			if(hasattr(device, "invalidate")):
+			if hasattr(device, "invalidate"):
 				device.invalidate()
 			else:
 				device.active = False

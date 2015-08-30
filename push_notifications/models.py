@@ -1,6 +1,9 @@
+from __future__ import unicode_literals
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 from .apns import (apns_fetch_inactive_ids, apns_send_bulk_message,
@@ -9,10 +12,12 @@ from .fields import HexIntegerField
 
 SERVICE_GCM = 0
 SERVICE_APNS = 1
+SERVICE_INACTIVE = 2
 
 SERVICES = (
 	(SERVICE_GCM, "GCM"),
 	(SERVICE_APNS, "APNS"),
+	(SERVICE_INACTIVE, "Inactive"),
 )
 
 
@@ -22,7 +27,7 @@ class DeviceManager(models.Manager):
 
 	def invalidate(self, registration_ids):
 		""" Called when some registration ids are deemed invalid. """
-		self.filter(registration_id__in=registration_ids).update(active=False)
+		self.filter(registration_id__in=registration_ids).update(service=SERVICE_INACTIVE)
 
 
 class DeviceQuerySet(models.query.QuerySet):
@@ -32,11 +37,10 @@ class DeviceQuerySet(models.query.QuerySet):
 			apnsDevices = []
 
 			for device in self:
-				if device.active:
-					if device.service == SERVICE_APNS:
-						apnsDevices.append(device)
-					else:
-						gcmDevices.append(device)
+				if device.service == SERVICE_APNS:
+					apnsDevices.append(device)
+				elif device.service == SERVICE_GCM:
+					gcmDevices.append(device)
 
 			if apnsDevices:
 				apns_send_bulk_message(
@@ -64,16 +68,12 @@ class DeviceQuerySet(models.query.QuerySet):
 class BareDevice(models.Model):
 	service = models.IntegerField(
 		choices=SERVICES,
-		verbose_name=_("Notification service")
+		verbose_name=_("Notification service"),
+		default=SERVICE_INACTIVE
 	)
 	registration_id = models.TextField(
 		blank=True,
 		verbose_name=_("Registration ID")
-	)
-	active = models.BooleanField(
-		verbose_name=_("Is active"),
-		default=True,
-		help_text=_("Inactive devices will not be sent notifications")
 	)
 
 	objects = DeviceManager()
@@ -83,14 +83,19 @@ class BareDevice(models.Model):
 	class Meta:
 		abstract = True
 
+	@cached_property
+	def active(self):
+		return self.service != SERVICE_INACTIVE
+
 	def save(self, *args, **kwargs):
-		if not self.registration_id:
-			self.active = False
-		elif (self.active
-			and self.service == SERVICE_APNS
-			and len(self.registration_id) > 64):
-			raise ValidationError("APNS registration_id's max length is 64.")
-		super(BareDevice, self).save(*args, **kwargs)
+		if (self.service != SERVICE_INACTIVE
+			and not self.registration_id):
+			self.invalidate()
+		else:
+			if (self.service == SERVICE_APNS
+				and len(self.registration_id) > 64):
+				raise ValidationError("APNS registration_id's max length is 64.")
+			super(BareDevice, self).save(*args, **kwargs)
 
 	def send_message(self, message, **kwargs):
 		if self.active:
@@ -115,7 +120,7 @@ class BareDevice(models.Model):
 
 	def invalidate(self):
 		""" Called when the registration_id is deemed invalid. """
-		self.active = False
+		self.service = SERVICE_INACTIVE
 		self.save()
 
 	def __unicode__(self):
