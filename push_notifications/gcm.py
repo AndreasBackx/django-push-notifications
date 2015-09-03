@@ -151,12 +151,11 @@ def gcm_send_message(device, data, api_key=None, **kwargs):
 	return _gcm_send_plain(
 		device,
 		data,
-		api_key=api_key,
 		**kwargs
 	)
 
 
-def gcm_send_bulk_message(devices, data, api_key=None, **kwargs):
+def gcm_send_bulk_message(devices, data, **kwargs):
 	"""
 	Sends a GCM notification to one or more registration_ids. The registration_ids
 	needs to be a list.
@@ -176,7 +175,6 @@ def gcm_send_bulk_message(devices, data, api_key=None, **kwargs):
 				_gcm_send_json(
 					chunk,
 					data,
-					api_key=api_key,
 					**kwargs
 				)
 			)
@@ -185,6 +183,5 @@ def gcm_send_bulk_message(devices, data, api_key=None, **kwargs):
 	return _gcm_send_json(
 		devices,
 		data,
-		api_key=api_key,
 		**kwargs
 	)

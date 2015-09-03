@@ -3,7 +3,6 @@ import mock
 from django.core.management import call_command
 
 from django.test import TestCase
-from push_notifications.apns import _apns_send, APNSDataOverflow
 
 
 class CommandsTestCase(TestCase):
