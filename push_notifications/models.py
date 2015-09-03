@@ -7,7 +7,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 from .apns import (apns_fetch_inactive_ids, apns_send_bulk_message,
-				apns_send_message)
+					apns_send_message)
 from .fields import HexIntegerField
 
 SERVICE_GCM = 0

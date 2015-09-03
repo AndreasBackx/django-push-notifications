@@ -6,18 +6,24 @@ https://developer.apple.com/library/ios/documentation/NetworkingInternet/Concept
 
 import codecs
 import json
-import ssl
-import struct
 import socket
+import struct
 import time
-from contextlib import closing
 from binascii import unhexlify
+from contextlib import closing
+
+import ssl
 from django.core.exceptions import ImproperlyConfigured
+
 from . import NotificationError
 from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
 
 
 class APNSError(NotificationError):
+	pass
+
+
+class InvalidRegistration(APNSError):
 	pass
 
 
@@ -34,6 +40,7 @@ class APNSDataOverflow(APNSError):
 
 def _apns_create_socket(address_tuple, certificate=None):
 	certfile = SETTINGS.get("APNS_CERTIFICATE") if certificate is None else certificate
+
 	if not certfile:
 		raise ImproperlyConfigured(
 			'You need to set PUSH_NOTIFICATIONS_SETTINGS["APNS_CERTIFICATE"] to send messages through APNS.'
@@ -69,7 +76,10 @@ def _apns_create_socket_to_feedback(certificate=None):
 
 
 def _apns_pack_frame(token_hex, payload, identifier, expiration, priority):
-	token = unhexlify(token_hex)
+	try:
+		token = unhexlify(token_hex)
+	except TypeError:
+		raise InvalidRegistration()
 	# |COMMAND|FRAME-LEN|{token}|{payload}|{id:4}|{expiration:4}|{priority:1}
 	frame_len = 3 * 5 + len(token) + len(payload) + 4 + 4 + 1  # 5 items, each 3 bytes prefix, then each item length
 	frame_fmt = "!BIBH%ssBH%ssBHIBHIBHB" % (len(token), len(payload))
@@ -229,28 +239,46 @@ def apns_send_bulk_message(devices, alert, certificate=None, **kwargs):
 	it won't be included in the notification. You will need to pass None
 	to this for silent notifications.
 	"""
-	with closing(_apns_create_socket_to_push()) as socket:
+	invalid_devices = []
+	with closing(_apns_create_socket_to_push(certificate=certificate)) as socket:
 		for identifier, device in enumerate(devices):
-			_apns_send(
-				device.registration_id,
-				alert,
-				identifier=identifier,
-				socket=socket,
-				certificate=certificate,
-				**kwargs
-			)
+			try:
+				_apns_send(
+					device.registration_id,
+					alert,
+					identifier=identifier,
+					socket=socket,
+					certificate=certificate,
+					**kwargs
+				)
+			except InvalidRegistration:
+				invalid_devices.append(device)
 		_apns_check_errors(socket)
 
+	# GCMDevice and APNSDevice cannot be used together
+	# so we don't need to keep track the class of every device.
+	cls = None
+	invalid_registrations = []
+	for device in invalid_devices:
+		if not hasattr(device, 'invalidate'):
+			cls = device.__class__
+			invalid_registrations.append(device.registration_id)
+		else:
+			device.invalidate()
 
-def apns_fetch_inactive_ids():
+	if cls:
+		cls.objects.filter(registration_id__in=invalid_registrations).update(active=False)
+
+
+def apns_fetch_inactive_ids(certificate=None):
 	"""
 	Queries the APNS server for id's that are no longer active since
 	the last fetch
 	"""
-	with closing(_apns_create_socket_to_feedback()) as socket:
+	with closing(_apns_create_socket_to_feedback(certificate=certificate)) as socket:
 		inactive_ids = []
 		# Maybe we should have a flag to return the timestamp?
 		# It doesn't seem that useful right now, though.
-		for tStamp, registration_id in _apns_receive_feedback(socket):
+		for tStamp, registration_id in _apns_receive_feedback(socket, certificate=certificate):
 			inactive_ids.append(codecs.encode(registration_id, 'hex_codec'))
 		return inactive_ids
