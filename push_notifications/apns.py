@@ -279,6 +279,6 @@ def apns_fetch_inactive_ids(certificate=None):
 		inactive_ids = []
 		# Maybe we should have a flag to return the timestamp?
 		# It doesn't seem that useful right now, though.
-		for tStamp, registration_id in _apns_receive_feedback(socket):
+		for tStamp, registration_id in _apns_receive_feedback(socket, certificate=certificate):
 			inactive_ids.append(codecs.encode(registration_id, 'hex_codec'))
 		return inactive_ids
