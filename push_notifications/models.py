@@ -59,7 +59,7 @@ class DeviceQuerySet(models.query.QuerySet):
 				return gcm_send_bulk_message(
 					devices=gcmDevices,
 					data=data,
-					api_key=apnsDevices[0].APNS_CERTIFICATE,
+					api_key=gcmDevices[0].GCM_API_KEY,
 					**kwargs
 				)
 			return None
