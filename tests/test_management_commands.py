@@ -18,7 +18,7 @@ class CommandsTestCase(TestCase):
 				mock.MagicMock()):
 			with mock.patch('push_notifications.apns._apns_receive_feedback',
 					mock.MagicMock()) as receiver:
-				receiver.side_effect = lambda s: [(b'', b'abc')]
+				receiver.side_effect = lambda s, certificate: [(b'', b'abc')]
 				call_command('prune_devices')
-		device = APNSDevice.objects.get(pk=device.pk)
+		device.refresh_from_db()
 		self.assertFalse(device.active)

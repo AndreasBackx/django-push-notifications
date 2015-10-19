@@ -162,8 +162,9 @@ class ModelTestCase(TestCase):
                             return_value=error):
                 device = GCMDevice.objects.get(registration_id=device_list[index])
                 device.send_message("Hello World!")
-                assert GCMDevice.objects.get(registration_id=device_list[index]) \
-                           .active is False
+                assert GCMDevice.objects.get(
+                    registration_id=device_list[index]
+                ).active is False
 
     def test_gcm_send_message_to_single_device_with_error_b(self):
         # these errors are not device specific, GCMError should be thrown
@@ -184,12 +185,15 @@ class ModelTestCase(TestCase):
                         return_value=GCM_JSON_RESPONSE_ERROR):
             devices = GCMDevice.objects.all()
             devices.send_message("Hello World")
-            assert GCMDevice.objects.get(registration_id=device_list[0]) \
-                       .active is False
-            assert GCMDevice.objects.get(registration_id=device_list[1]) \
-                       .active is True
-            assert GCMDevice.objects.get(registration_id=device_list[2]) \
-                       .active is False
+            assert GCMDevice.objects.get(
+                registration_id=device_list[0]
+            ).active is False
+            assert GCMDevice.objects.get(
+                registration_id=device_list[1]
+            ).active is True
+            assert GCMDevice.objects.get(
+                registration_id=device_list[2]
+            ).active is False
 
     def test_apns_send_message(self):
         device = APNSDevice.objects.create(

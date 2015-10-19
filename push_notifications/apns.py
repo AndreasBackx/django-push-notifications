@@ -221,13 +221,19 @@ def apns_send_message(device, alert, certificate=None, **kwargs):
 	it won't be included in the notification. You will need to pass None
 	to this for silent notifications.
 	"""
-
-	_apns_send(
-		device.registration_id,
-		alert,
-		certificate=certificate,
-		**kwargs
-	)
+	try:
+		_apns_send(
+			device.registration_id,
+			alert,
+			certificate=certificate,
+			**kwargs
+		)
+	except InvalidRegistration:
+		if not hasattr(device, 'invalidate'):
+			cls = device.__class__
+			cls.objects.filter(registration_id=device.registration_id).update(active=False)
+		else:
+			device.invalidate()
 
 
 def apns_send_bulk_message(devices, alert, certificate=None, **kwargs):
