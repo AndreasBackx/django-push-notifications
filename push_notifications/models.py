@@ -90,12 +90,11 @@ class BareDevice(models.Model):
 	def save(self, *args, **kwargs):
 		if (self.service != SERVICE_INACTIVE
 			and not self.registration_id):
-			self.invalidate()
-		else:
-			if (self.service == SERVICE_APNS
-				and len(self.registration_id) > 64):
-				raise ValidationError("APNS registration_id's max length is 64.")
-			super(BareDevice, self).save(*args, **kwargs)
+			self.invalidate(save=False)
+		if (self.service == SERVICE_APNS
+			and len(self.registration_id) > 64):
+			raise ValidationError("APNS registration_id's max length is 64.")
+		super(BareDevice, self).save(*args, **kwargs)
 
 	def send_message(self, message, **kwargs):
 		if self.active:
@@ -118,10 +117,11 @@ class BareDevice(models.Model):
 					**kwargs
 				)
 
-	def invalidate(self):
+	def invalidate(self, save=True):
 		""" Called when the registration_id is deemed invalid. """
 		self.service = SERVICE_INACTIVE
-		self.save()
+		if save:
+			self.save()
 
 	def __unicode__(self):
 		return "{service}: {registration_id}".format(
