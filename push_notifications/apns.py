@@ -9,7 +9,7 @@ import json
 import socket
 import struct
 import time
-from binascii import unhexlify
+from binascii import unhexlify, Error as BinasciiError
 from contextlib import closing
 
 import ssl
@@ -78,7 +78,7 @@ def _apns_create_socket_to_feedback(certificate=None):
 def _apns_pack_frame(token_hex, payload, identifier, expiration, priority):
 	try:
 		token = unhexlify(token_hex)
-	except TypeError:
+	except (TypeError, BinasciiError):
 		raise InvalidRegistration()
 	# |COMMAND|FRAME-LEN|{token}|{payload}|{id:4}|{expiration:4}|{priority:1}
 	frame_len = 3 * 5 + len(token) + len(payload) + 4 + 4 + 1  # 5 items, each 3 bytes prefix, then each item length
