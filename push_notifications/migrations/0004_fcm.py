@@ -8,15 +8,15 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-	dependencies = [
-		migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-		('push_notifications', '0003_wnsdevice'),
-	]
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('push_notifications', '0003_wnsdevice'),
+    ]
 
-	operations = [
-		migrations.AddField(
-			model_name='gcmdevice',
-			name='cloud_message_type',
-			field=models.CharField(choices=[('FCM', 'Firebase Cloud Message'), ('GCM', 'Google Cloud Message')], default='GCM', help_text='You should choose FCM or GCM', max_length=3, verbose_name='Cloud Message Type')
-		),
-	]
+    operations = [
+        migrations.AddField(
+            model_name='gcmdevice',
+            name='cloud_message_type',
+            field=models.CharField(choices=[('FCM', 'Firebase Cloud Message'), ('GCM', 'Google Cloud Message')], default='GCM', help_text='You should choose FCM or GCM', max_length=3, verbose_name='Cloud Message Type')
+        ),
+    ]

@@ -1,27 +1,27 @@
-### Coding style
+# Style guide
 
-This project follows the [HearthSim Styleguide](https://hearthsim.info/styleguide/).
-
-In short:
-
-1. Always use tabs. [Here](https://leclan.ch/tabs) is a short explanation why tabs are preferred.
-2. Always use double quotes for strings, unless single quotes avoid unnecessary escapes.
-3. When in doubt, [PEP8](https://www.python.org/dev/peps/pep-0008/). Follow its naming conventions.
-4. Know when to make exceptions.
-
-Also see: [How to name things in programming](http://www.slideshare.net/pirhilton/how-to-name-things-the-hardest-problem-in-programming)
+1. Follow PEP8.
+2. Use a 99 maximum character length instead of 79, but strive towards 79.
+3. This is Python, not Java, Go, and definitely not JavaScript.
+4. Watch ["Beyond PEP8" by Raymond Hettinger](https://www.youtube.com/watch?v=wf-BqAjZb8M).
 
 
-### Commits and Pull Requests
+# Commits and Pull Requests
 
-Keep the commit log as healthy as the code. It is one of the first places new contributors will look at the project.
+All commits and pull requests should follow the following guidelines:
 
-1. No more than one change per commit. There should be no changes in a commit which are unrelated to its message.
-2. Every commit should pass all tests on its own.
-3. Follow [these conventions](http://chris.beams.io/posts/git-commit/) when writing the commit message
+1. Keep pull requests **atomic**.
+2. Provide a **clear explanation** of the feature or bug that you're addressing.
+3. Conform to the **style guide**.
+4. Somewhat conform to [Git commit guidelines set by Git itself](https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project#_commit_guidelines). I'm pretty loose on this, just make it descriptive.
+5. **Squash your commits** into 1 commit or into a few atomic commits where 1 commit is 1 feature that works.
+6. Base it on the **most recent default branch** (the branch GitHub shows by default).
+7. Use a **new branch** for your commit. [This makes it easy to checkout to a pull requests' branch](https://help.github.com/articles/checking-out-pull-requests-locally/).
 
-When filing a Pull Request, make sure it is rebased on top of most recent master.
-If you need to modify it or amend it in some way, you should always appropriately
-[fixup](https://help.github.com/articles/about-git-rebase/) the issues in git and force-push your changes to your fork.
+## New features
+1. Try to only add **1 feature per pull request**.
 
-Also see: [Github Help: Using Pull Requests](https://help.github.com/articles/using-pull-requests/)
+## Bugs
+1. **Add failing tests** to your pull request. This clearly shows the problem.
+2. *(optional) Add code to fix your failing tests in a separate commit. Making it a separate commit will still show the failed test(s) of the first commit.*
+3. Squashed commits should remove the failing test commit.

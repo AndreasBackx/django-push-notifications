@@ -1,31 +1,30 @@
 from django.conf import settings
 
-
 PUSH_NOTIFICATIONS_SETTINGS = getattr(settings, "PUSH_NOTIFICATIONS_SETTINGS", {})
 
 PUSH_NOTIFICATIONS_SETTINGS.setdefault(
-	"CONFIG", "push_notifications.conf.LegacyConfig"
+    "CONFIG", "push_notifications.conf.LegacyConfig"
 )
 
 # GCM
 PUSH_NOTIFICATIONS_SETTINGS.setdefault(
-	"GCM_POST_URL", "https://android.googleapis.com/gcm/send"
+    "GCM_POST_URL", "https://android.googleapis.com/gcm/send"
 )
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("GCM_MAX_RECIPIENTS", 1000)
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("GCM_ERROR_TIMEOUT", None)
 
 # FCM
 PUSH_NOTIFICATIONS_SETTINGS.setdefault(
-	"FCM_POST_URL", "https://fcm.googleapis.com/fcm/send"
+    "FCM_POST_URL", "https://fcm.googleapis.com/fcm/send"
 )
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("FCM_MAX_RECIPIENTS", 1000)
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("FCM_ERROR_TIMEOUT", None)
 
 # APNS
 if settings.DEBUG:
-	PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_USE_SANDBOX", True)
+    PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_USE_SANDBOX", True)
 else:
-	PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_USE_SANDBOX", False)
+    PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_USE_SANDBOX", False)
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_USE_ALTERNATIVE_PORT", False)
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_TOPIC", "")
 
@@ -33,7 +32,7 @@ PUSH_NOTIFICATIONS_SETTINGS.setdefault("APNS_TOPIC", "")
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("WNS_PACKAGE_SECURITY_ID", None)
 PUSH_NOTIFICATIONS_SETTINGS.setdefault("WNS_SECRET_KEY", None)
 PUSH_NOTIFICATIONS_SETTINGS.setdefault(
-	"WNS_ACCESS_URL", "https://login.live.com/accesstoken.srf"
+    "WNS_ACCESS_URL", "https://login.live.com/accesstoken.srf"
 )
 
 # User model

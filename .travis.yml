@@ -1,4 +1,3 @@
-# https://travis-ci.org/jleclanche/django-push-notifications
 sudo: false
 language: python
 python: "3.6"
@@ -11,6 +10,7 @@ env:
   - TOXENV=py36-django111
   - TOXENV=py36-djangomaster
   - TOXENV=flake8
+  - TOXENV=isort
 
 cache:
   directories:

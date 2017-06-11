@@ -4,32 +4,33 @@ from push_notifications.conf import LegacyConfig
 
 
 class LegacyConfigTestCase(TestCase):
-	def test_get_error_timeout(self):
 
-		config = LegacyConfig()
+    def test_get_error_timeout(self):
 
-		# confirm default value is None
-		assert config.get_error_timeout("GCM") is None
+        config = LegacyConfig()
 
-		# confirm default value is None
-		assert config.get_error_timeout("FCM") is None
+        # confirm default value is None
+        assert config.get_error_timeout("GCM") is None
 
-		# confirm legacy does not support GCM with an application_id
-		with self.assertRaises(ImproperlyConfigured) as ic:
-			config.get_error_timeout("GCM", "my_app_id")
+        # confirm default value is None
+        assert config.get_error_timeout("FCM") is None
 
-		self.assertEqual(
-			str(ic.exception),
-			"LegacySettings does not support application_id. To enable multiple"
-			" application support, use push_notifications.conf.AppSettings."
-		)
+        # confirm legacy does not support GCM with an application_id
+        with self.assertRaises(ImproperlyConfigured) as ic:
+            config.get_error_timeout("GCM", "my_app_id")
 
-		# confirm legacy does not support FCM with an application_id
-		with self.assertRaises(ImproperlyConfigured) as ic:
-			config.get_error_timeout("FCM", "my_app_id")
+        self.assertEqual(
+            str(ic.exception),
+            "LegacySettings does not support application_id. To enable multiple"
+            " application support, use push_notifications.conf.AppSettings."
+        )
 
-		self.assertEqual(
-			str(ic.exception),
-			"LegacySettings does not support application_id. To enable multiple"
-			" application support, use push_notifications.conf.AppSettings."
-		)
+        # confirm legacy does not support FCM with an application_id
+        with self.assertRaises(ImproperlyConfigured) as ic:
+            config.get_error_timeout("FCM", "my_app_id")
+
+        self.assertEqual(
+            str(ic.exception),
+            "LegacySettings does not support application_id. To enable multiple"
+            " application support, use push_notifications.conf.AppSettings."
+        )

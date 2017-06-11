@@ -1,9 +1,16 @@
 django-push-notifications
 =========================
-.. image:: https://api.travis-ci.org/jleclanche/django-push-notifications.png
-	:target: https://travis-ci.org/jleclanche/django-push-notifications
+.. image:: https://api.travis-ci.org/AndreasBackx/django-push-notifications.png
+    :target: https://travis-ci.org/AndreasBackx/django-push-notifications
 
 A minimal Django app that implements Device models that can send messages through APNS, FCM/GCM and WNS.
+
+This fork will be branching from django-push-notifications because of the following reasons:
+ - The codestyle will uniform to what is used in the Python community. It will conform to PEP8, but will have a maximum line length of 99 characters and a preferred maximum line length of 79 characters. The goal however is to keep it readable in the first place and not sacrifice that because of the blind use of tabs or PEP8. I would like to refer to the talk `"Beyond PEP8" by Raymond Hettinger <https://www.youtube.com/watch?v=wf-BqAjZb8M>`_ for what I see as good code.
+ - More OOP pythonic code, see previous point.
+ - Lose the tabs, go for spaces. Reason being that most Python tools do not properly support tabs. All of them properly support spaces. See first point again.
+ - Lose the Django dependency, rather make the dependency optional.
+ - Drop Python 2.7 support in the future once it becomes an obstacle if it not already is.
 
 The app implements three models: ``GCMDevice``, ``APNSDevice`` and ``WNSDevice``. Those models share the same attributes:
  - ``name`` (optional): A name for the device.
@@ -20,7 +27,7 @@ single messages.
 
 Dependencies
 ------------
-- Python 2.7 or 3.4+
+- Python 2.7 or 3.4+ (Python 2.7 will be dropped once it becomes an obstacle.)
 - Django 1.10+
 - For the API module, Django REST Framework 3.5+ is required.
 
@@ -30,30 +37,30 @@ You can install the library directly from pypi using pip:
 
 .. code-block:: shell
 
-	$ pip install django-push-notifications
+    $ pip install django-push-notifications
 
 
 Edit your settings.py file:
 
 .. code-block:: python
 
-	INSTALLED_APPS = (
-		...
-		"push_notifications"
-	)
+    INSTALLED_APPS = (
+        ...
+        "push_notifications"
+    )
 
-	PUSH_NOTIFICATIONS_SETTINGS = {
-		"FCM_API_KEY": "[your api key]",
-		"GCM_API_KEY": "[your api key]",
-		"APNS_CERTIFICATE": "/path/to/your/certificate.pem",
-		"APNS_TOPIC": "com.example.push_test",
-		"WNS_PACKAGE_SECURITY_ID": "[your package security id, e.g: 'ms-app://e-3-4-6234...']",
-		"WNS_SECRET_KEY": "[your app secret key, e.g.: 'KDiejnLKDUWodsjmewuSZkk']",
-	}
+    PUSH_NOTIFICATIONS_SETTINGS = {
+        "FCM_API_KEY": "[your api key]",
+        "GCM_API_KEY": "[your api key]",
+        "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
+        "APNS_TOPIC": "com.example.push_test",
+        "WNS_PACKAGE_SECURITY_ID": "[your package security id, e.g: 'ms-app://e-3-4-6234...']",
+        "WNS_SECRET_KEY": "[your app secret key, e.g.: 'KDiejnLKDUWodsjmewuSZkk']",
+    }
 
 .. note::
-	If you are planning on running your project with ``APNS_USE_SANDBOX=True``, then make sure you have set the
-	*development* certificate as your ``APNS_CERTIFICATE``. Otherwise the app will not be able to connect to the correct host. See settings_ for details.
+    If you are planning on running your project with ``APNS_USE_SANDBOX=True``, then make sure you have set the
+    *development* certificate as your ``APNS_CERTIFICATE``. Otherwise the app will not be able to connect to the correct host. See settings_ for details.
 
 You can learn more about APNS certificates `here <https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Chapters/ApplePushService.html>`_.
 
@@ -99,41 +106,41 @@ FCM/GCM and APNS services have slightly different semantics. The app tries to of
 
 .. code-block:: python
 
-	from push_notifications.models import APNSDevice, GCMDevice
+    from push_notifications.models import APNSDevice, GCMDevice
 
-	device = GCMDevice.objects.get(registration_id=gcm_reg_id)
-	# The first argument will be sent as "message" to the intent extras Bundle
-	# Retrieve it with intent.getExtras().getString("message")
-	device.send_message("You've got mail")
-	# If you want to customize, send an extra dict and a None message.
-	# the extras dict will be mapped into the intent extras Bundle.
-	# For dicts where all values are keys this will be sent as url parameters,
-	# but for more complex nested collections the extras dict will be sent via
-	# the bulk message api.
-	device.send_message(None, extra={"foo": "bar"})
+    device = GCMDevice.objects.get(registration_id=gcm_reg_id)
+    # The first argument will be sent as "message" to the intent extras Bundle
+    # Retrieve it with intent.getExtras().getString("message")
+    device.send_message("You've got mail")
+    # If you want to customize, send an extra dict and a None message.
+    # the extras dict will be mapped into the intent extras Bundle.
+    # For dicts where all values are keys this will be sent as url parameters,
+    # but for more complex nested collections the extras dict will be sent via
+    # the bulk message api.
+    device.send_message(None, extra={"foo": "bar"})
 
-	device = APNSDevice.objects.get(registration_id=apns_token)
-	device.send_message("You've got mail") # Alert message may only be sent as text.
-	device.send_message(None, badge=5) # No alerts but with badge.
-	device.send_message(None, content_available=1, extra={"foo": "bar"}) # Silent message with custom data.
-	# alert with title and body.
-	device.send_message(message={"title" : "Game Request", "body" : "Bob wants to play poker"}, extra={"foo": "bar"})
-	device.send_message("Hello again", thread_id="123", extra={"foo": "bar"}) # set thread-id to allow iOS to merge notifications
+    device = APNSDevice.objects.get(registration_id=apns_token)
+    device.send_message("You've got mail") # Alert message may only be sent as text.
+    device.send_message(None, badge=5) # No alerts but with badge.
+    device.send_message(None, content_available=1, extra={"foo": "bar"}) # Silent message with custom data.
+    # alert with title and body.
+    device.send_message(message={"title" : "Game Request", "body" : "Bob wants to play poker"}, extra={"foo": "bar"})
+    device.send_message("Hello again", thread_id="123", extra={"foo": "bar"}) # set thread-id to allow iOS to merge notifications
 
 .. note::
-	APNS does not support sending payloads that exceed 2048 bytes (increased from 256 in 2014).
-	The message is only one part of the payload, if
-	once constructed the payload exceeds the maximum size, an ``APNSDataOverflow`` exception will be raised before anything is sent.
+    APNS does not support sending payloads that exceed 2048 bytes (increased from 256 in 2014).
+    The message is only one part of the payload, if
+    once constructed the payload exceeds the maximum size, an ``APNSDataOverflow`` exception will be raised before anything is sent.
   Reference: `Apple Payload Documentation <https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CreatingtheNotificationPayload.html#//apple_ref/doc/uid/TP40008194-CH10-SW1>`_
 
 Sending messages in bulk
 ------------------------
 .. code-block:: python
 
-	from push_notifications.models import APNSDevice, GCMDevice
+    from push_notifications.models import APNSDevice, GCMDevice
 
-	devices = GCMDevice.objects.filter(user__first_name="James")
-	devices.send_message("Happy name day!")
+    devices = GCMDevice.objects.filter(user__first_name="James")
+    devices.send_message("Happy name day!")
 
 Sending messages in bulk makes use of the bulk mechanics offered by GCM and APNS. It is almost always preferable to send
 bulk notifications instead of single ones.
@@ -143,10 +150,10 @@ value per user. Assuming User model has a method get_badge returning badge count
 
 .. code-block:: python
 
-	devices.send_message(
-		"Happy name day!",
-		badge=lambda token: APNSDevice.objects.get(registration_id=token).user.get_badge()
-	)
+    devices.send_message(
+        "Happy name day!",
+        badge=lambda token: APNSDevice.objects.get(registration_id=token).user.get_badge()
+    )
 
 Firebase vs Google Cloud Messaging
 ----------------------------------
@@ -159,35 +166,35 @@ When using FCM, ``django-push-notifications`` will automatically use the `notifi
 
 .. code-block:: python
 
-	# Create a FCM device
-	fcm_device = GCMDevice.objects.create(registration_id="token", cloud_message_type="FCM", user=the_user)
+    # Create a FCM device
+    fcm_device = GCMDevice.objects.create(registration_id="token", cloud_message_type="FCM", user=the_user)
 
-	# Send a notification message
-	fcm_device.send_message("This is a message")
+    # Send a notification message
+    fcm_device.send_message("This is a message")
 
-	# Send a notification message with additionnal payload
-	fcm_device.send_message("This is a enriched message", extra={"title": "Notification title", "icon": "icon_ressource"})
+    # Send a notification message with additionnal payload
+    fcm_device.send_message("This is a enriched message", extra={"title": "Notification title", "icon": "icon_ressource"})
 
-	# Send a notification message with additionnal payload (alternative syntax)
-	fcm_device.send_message("This is a enriched message", title="Notification title", badge=6)
+    # Send a notification message with additionnal payload (alternative syntax)
+    fcm_device.send_message("This is a enriched message", title="Notification title", badge=6)
 
-	# Send a notification message with extra data
-	fcm_device.send_message("This is a message with data", extra={"other": "content", "misc": "data"})
+    # Send a notification message with extra data
+    fcm_device.send_message("This is a message with data", extra={"other": "content", "misc": "data"})
 
-	# Send a notification message with options
-	fcm_device.send_message("This is a message", time_to_live=3600)
+    # Send a notification message with options
+    fcm_device.send_message("This is a message", time_to_live=3600)
 
-	# Send a data message only
-	fcm_device.send_message(None, extra={"other": "content", "misc": "data"})
+    # Send a data message only
+    fcm_device.send_message(None, extra={"other": "content", "misc": "data"})
 
 You can disable this default behaviour by setting ``use_fcm_notifications`` to ``False``.
 
 .. code-block:: python
 
-	fcm_device = GCMDevice.objects.create(registration_id="token", cloud_message_type="FCM", user=the_user)
+    fcm_device = GCMDevice.objects.create(registration_id="token", cloud_message_type="FCM", user=the_user)
 
-	# Send a data message with classic format
-	fcm_device.send_message("This is a message", use_fcm_notifications=False)
+    # Send a data message with classic format
+    fcm_device.send_message("This is a message", use_fcm_notifications=False)
 
 
 Sending FCM/GCM messages to topic members
@@ -197,7 +204,7 @@ Note: gcm_send_bulk_message must be used when sending messages to topic subscrib
 
 .. code-block:: python
 
-	from push_notifications.gcm import send_message
+    from push_notifications.gcm import send_message
 
         # First param is "None" because no Registration_id is needed, the message will be sent to all devices subscribed to the topic.
         send_message(None, {"body": "Hello members of my_topic!"}, to="/topics/my_topic")
@@ -219,13 +226,13 @@ ViewSets are available for both APNS and GCM devices in two permission flavors:
 
 - ``APNSDeviceViewSet`` and ``GCMDeviceViewSet``
 
-	- Permissions as specified in settings (``AllowAny`` by default, which is not recommended)
-	- A device may be registered without associating it with a user
+    - Permissions as specified in settings (``AllowAny`` by default, which is not recommended)
+    - A device may be registered without associating it with a user
 
 - ``APNSDeviceAuthorizedViewSet`` and ``GCMDeviceAuthorizedViewSet``
 
-	- Permissions are ``IsAuthenticated`` and custom permission ``IsOwner``, which will only allow the ``request.user`` to get and update devices that belong to that user
-	- Requires a user to be authenticated, so all devices will be associated with a user
+    - Permissions are ``IsAuthenticated`` and custom permission ``IsOwner``, which will only allow the ``request.user`` to get and update devices that belong to that user
+    - Requires a user to be authenticated, so all devices will be associated with a user
 
 When creating an ``APNSDevice``, the ``registration_id`` is validated to be a 64-character or 200-character hexadecimal string. Since 2016, device tokens are to be increased from 32 bytes to 100 bytes.
 
@@ -236,31 +243,31 @@ Routes can be added one of two ways:
 
 ::
 
-	from push_notifications.api.rest_framework import APNSDeviceAuthorizedViewSet, GCMDeviceAuthorizedViewSet
-	from rest_framework.routers import DefaultRouter
+    from push_notifications.api.rest_framework import APNSDeviceAuthorizedViewSet, GCMDeviceAuthorizedViewSet
+    from rest_framework.routers import DefaultRouter
 
-	router = DefaultRouter()
-	router.register(r'device/apns', APNSDeviceAuthorizedViewSet)
-	router.register(r'device/gcm', GCMDeviceAuthorizedViewSet)
+    router = DefaultRouter()
+    router.register(r'device/apns', APNSDeviceAuthorizedViewSet)
+    router.register(r'device/gcm', GCMDeviceAuthorizedViewSet)
 
-	urlpatterns = patterns('',
-		# URLs will show up at <api_root>/device/apns
-		url(r'^', include(router.urls)),
-		# ...
-	)
+    urlpatterns = patterns('',
+        # URLs will show up at <api_root>/device/apns
+        url(r'^', include(router.urls)),
+        # ...
+    )
 
 - Using as_view_ (specify which views to include)
 .. _as_view: http://www.django-rest-framework.org/tutorial/6-viewsets-and-routers#binding-viewsets-to-urls-explicitly
 
 ::
 
-	from push_notifications.api.rest_framework import APNSDeviceAuthorizedViewSet
+    from push_notifications.api.rest_framework import APNSDeviceAuthorizedViewSet
 
-	urlpatterns = patterns('',
-		# Only allow creation of devices by authenticated users
-		url(r'^device/apns/?$', APNSDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_apns_device'),
-		# ...
-	)
+    urlpatterns = patterns('',
+        # Only allow creation of devices by authenticated users
+        url(r'^device/apns/?$', APNSDeviceAuthorizedViewSet.as_view({'post': 'create'}), name='create_apns_device'),
+        # ...
+    )
 
 Update of device with duplicate registration ID
 -----------------------------------------------
