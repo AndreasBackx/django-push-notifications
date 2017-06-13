@@ -36,14 +36,20 @@ class WNSNotificationResponseError(WNSError):
     pass
 
 
-def _wns_authenticate(scope="notify.windows.com", application_id=None):
+def _wns_authenticate(scope="notify.windows.com", client_id=None, client_secret=None,
+                      application_id=None):
     """
     Requests an Access token for WNS communication.
 
     :return: dict: {'access_token': <str>, 'expires_in': <int>, 'token_type': 'bearer'}
     """
-    client_id = get_manager().get_wns_package_security_id(application_id)
-    client_secret = get_manager().get_wns_secret_key(application_id)
+    client_id = client_id \
+        if client_id is not None \
+        else get_manager().get_wns_package_security_id(application_id)
+    client_secret = client_secret \
+        if client_secret is not None \
+        else get_manager().get_wns_secret_key(application_id)
+
     if not client_id:
         raise ImproperlyConfigured(
             'You need to set PUSH_NOTIFICATIONS_SETTINGS["WNS_PACKAGE_SECURITY_ID"] to '
@@ -91,7 +97,8 @@ def _wns_authenticate(scope="notify.windows.com", application_id=None):
     return access_token
 
 
-def _wns_send(uri, data, wns_type="wns/toast", application_id=None):
+def _wns_send(uri, data, wns_type="wns/toast", client_id=None,
+              client_secret=None, application_id=None):
     """
     Sends a notification data and authentication to WNS.
 
@@ -99,7 +106,11 @@ def _wns_send(uri, data, wns_type="wns/toast", application_id=None):
     :param data: dict: The notification data to be sent.
     :return:
     """
-    access_token = _wns_authenticate(application_id=application_id)
+    access_token = _wns_authenticate(
+        client_id=client_id,
+        client_secret=client_secret,
+        application_id=application_id
+    )
 
     content_type = "text/xml"
     if wns_type == "wns/raw":
@@ -181,7 +192,8 @@ def _wns_prepare_toast(data, **kwargs):
     return ET.tostring(root)
 
 
-def wns_send_message(uri, message=None, xml_data=None, raw_data=None, application_id=None,
+def wns_send_message(uri, message=None, xml_data=None, raw_data=None,
+                     client_id=None, client_secret=None, application_id=None,
                      **kwargs):
     """
     Sends a notification request to WNS.
@@ -241,12 +253,18 @@ def wns_send_message(uri, message=None, xml_data=None, raw_data=None, applicatio
         )
 
     return _wns_send(
-        uri=uri, data=prepared_data, wns_type=wns_type, application_id=application_id
+        uri=uri,
+        data=prepared_data,
+        wns_type=wns_type,
+        client_id=client_id,
+        client_secret=client_secret,
+        application_id=application_id
     )
 
 
 def wns_send_bulk_message(uri_list, message=None, xml_data=None, raw_data=None,
-                          application_id=None, **kwargs):
+                          client_id=None, client_secret=None, application_id=None,
+                          **kwargs):
     """
     WNS doesn't support bulk notification, so we loop through each uri.
 
@@ -259,8 +277,14 @@ def wns_send_bulk_message(uri_list, message=None, xml_data=None, raw_data=None,
     if uri_list:
         for uri in uri_list:
             r = wns_send_message(
-                uri=uri, message=message, xml_data=xml_data,
-                raw_data=raw_data, application_id=application_id, **kwargs
+                uri=uri,
+                message=message,
+                xml_data=xml_data,
+                raw_data=raw_data,
+                client_id=client_id,
+                client_secret=client_secret,
+                application_id=application_id,
+                **kwargs
             )
             res.append(r)
     return res

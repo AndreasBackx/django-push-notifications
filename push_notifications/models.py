@@ -1,11 +1,14 @@
 from __future__ import unicode_literals
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 from .fields import HexIntegerField
-from .managers import APNSDeviceManager, GCMDeviceManager, WNSDeviceManager
+from .managers import (APNSDeviceManager, BareDeviceManager, GCMDeviceManager,
+                       WNSDeviceManager)
 from .settings import PUSH_NOTIFICATIONS_SETTINGS as SETTINGS
 
 CLOUD_MESSAGE_TYPES = (
@@ -42,8 +45,8 @@ class Device(models.Model):
         max_length=64,
         verbose_name=_("Application ID"),
         help_text=_(
-            "Opaque application identity, should be filled in for multiple"
-            " key/certificate access"
+            "Opaque application identity, should be filled in for multiple "
+            "key/certificate access"
         ),
         blank=True,
         null=True
@@ -60,6 +63,112 @@ class Device(models.Model):
                 cls=self.__class__.__name__,
                 user=self.user or "unknown user"
             )
+        )
+
+
+class BareDevice(models.Model):
+
+    GCM = 0
+    APNS = 1
+    INACTIVE = 2
+    FCM = 3
+    WNS = 4
+    SERVICES = (
+        (GCM, "GCM"),
+        (APNS, "APNS"),
+        (INACTIVE, "Inactive"),
+        (FCM, "FCM"),
+        (WNS, "WNS"),
+    )
+
+    service = models.IntegerField(
+        choices=SERVICES,
+        verbose_name=_("Notification service"),
+        default=INACTIVE
+    )
+    registration_id = models.TextField(
+        blank=True,
+        verbose_name=_("Registration ID")
+    )
+
+    objects = BareDeviceManager()
+
+    APNS_CERTIFICATE = SETTINGS.get("APNS_CERTIFICATE", None)
+    GCM_API_KEY = SETTINGS.get("GCM_API_KEY", None)
+    WNS_CLIENT_ID = SETTINGS.get("WNS_PACKAGE_SECURITY_ID", None)
+    WNS_CLIENT_SECRET = SETTINGS.get("WNS_SECRET_KEY", None)
+
+    class Meta:
+        abstract = True
+
+    @cached_property
+    def active(self):
+        return self.service != self.INACTIVE
+
+    def save(self, *args, **kwargs):
+        if self.service != self.INACTIVE and not self.registration_id:
+            self.invalidate(save=False)
+        if self.service == self.APNS and len(self.registration_id) > 64:
+            raise ValidationError("APNS registration_id's max length is 64.")
+        super(BareDevice, self).save(*args, **kwargs)
+
+    def send_message(self, message, apns_certificate=None, **kwargs):
+        if apns_certificate is None:
+            apns_certificate = self.APNS_CERTIFICATE
+
+        if self.active:
+            if self.service == self.APNS:
+                from .apns import apns_send_message
+
+                return apns_send_message(
+                    registration_id=self.registration_id,
+                    alert=message,
+                    certfile=apns_certificate,
+                    **kwargs
+                )
+            elif self.service == self.WNS:
+                from .wns import wns_send_message
+
+                return wns_send_message(
+                    uri=self.registration_id,
+                    message=message,
+                    client_id=self.WNS_CLIENT_ID,
+                    client_secret=self.WNS_CLIENT_SECRET,
+                    **kwargs
+                )
+            else:
+                data = kwargs.pop("extra", {})
+                if message is not None:
+                    data["message"] = message
+                from .gcm import send_message as gcm_send_message
+                return gcm_send_message(
+                    device=self,
+                    data=data,
+                    api_key=self.GCM_API_KEY,
+                    **kwargs
+                )
+                cloud_types = {
+                    self.GCM: "GCM",
+                    self.FCM: "FCM",
+                }
+                return gcm_send_message(
+                    registration_ids=[self.registration_id],
+                    data=data,
+                    cloud_type=cloud_types[self.service],
+                    application_id=self.application_id,
+                    **kwargs
+                )
+
+    def invalidate(self, save=True):
+        """ Called when the registration_id is deemed invalid. """
+        self.service = self.INACTIVE
+        if save:
+            self.save()
+
+    def __unicode__(self):
+        return "{service}: {registration_id}".format(
+            service=self.get_service_display(),
+            registration_id=self.registration_id
         )
 
 
@@ -162,3 +271,6 @@ class WNSDevice(Device):
             application_id=self.application_id,
             **kwargs
         )
+
+
+SERVICE_INACTIVE = BareDevice.INACTIVE
