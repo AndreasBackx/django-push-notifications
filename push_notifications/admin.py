@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db import connection
 from django.utils.translation import ugettext_lazy as _
 
-from .models import APNSDevice, GCMDevice, SimpleDevice, get_expired_tokens
+from .models import APNSDevice, GCMDevice, get_expired_tokens
 
 User = get_user_model()
 
@@ -62,6 +62,7 @@ class GCMDeviceAdmin(DeviceAdmin):
 	"""
 	Inherits from DeviceAdmin to handle displaying gcm device as a hex value
 	"""
+
 	def device_id_hex(self, obj):
 		if connection.vendor in ("mysql", "sqlite") and obj.device_id:
 			return hex(obj.device_id).rstrip("L")
@@ -71,10 +72,6 @@ class GCMDeviceAdmin(DeviceAdmin):
 
 	list_display = ("__unicode__", "device_id_hex", "user", "active", "date_created")
 
+
 admin.site.register(APNSDevice, DeviceAdmin)
 admin.site.register(GCMDevice, GCMDeviceAdmin)
-
-
-@admin.register(SimpleDevice)
-class SimpleDeviceAdmin(admin.ModelAdmin):
-	pass
